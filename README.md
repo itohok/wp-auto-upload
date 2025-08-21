@@ -2,11 +2,11 @@
 
 [![Build Status](https://travis-ci.com/airani/wp-auto-upload.svg?branch=master)](https://travis-ci.com/airani/wp-auto-upload)
 
-**Version:** 3.3.2
+**Version:** 3.3.3
 
 **Requires at least:** 2.7
 
-**Tested up to:** 6.1.1
+**Tested up to:** 6.4.3
 
 **License:** GPLv2 or later
 
@@ -27,6 +27,7 @@ When you want to save a post, this plugin search for image urls which exists in 
 * Choose custom images file name with patterns
 * Choose custom image alt name with patterns
 * Choose max width and height for images uploaded
+* Properly handle protocol-relative URLs (//example.com/image.jpg)
 
 ### Translators
 
@@ -69,6 +70,10 @@ You can change the final filename of the image uploaded.
 
 You can exclude many domains from the upload.
 
+### Does the plugin support protocol-relative URLs (//example.com/image.jpg)?
+
+Yes, as of version 3.3.3, the plugin properly handles protocol-relative URLs, maintaining their format after upload.
+
 ## Screenshots
 
 ### 1. Settings page in English language
@@ -80,6 +85,11 @@ You can exclude many domains from the upload.
 ![2. Settings page in Persian language](https://ps.w.org/auto-upload-images/assets/screenshot-2.png)
 
 ## Changelog
+
+### 3.3.3
+* Fixed critical bug with protocol-relative URLs (//example.com/image.jpg) causing double protocol in image src
+* Improved URL normalization to better handle various URL formats
+* Enhanced image replacement logic to maintain original URL format
 
 ### 3.3.2
 * Add support for `webp` images
