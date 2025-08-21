@@ -78,9 +78,16 @@ class WpAutoUpload
         foreach ($images as $image) {
             $uploader = new ImageUploader($image['url'], $image['alt'], $postarr);
             if ($uploadedImage = $uploader->save()) {
-                $urlParts = parse_url($uploadedImage['url']);
-                $base_url = $uploader::getHostUrl(null, true, true);
-                $image_url = $base_url . $urlParts['path'];
+                // 获取上传后的URL
+                $image_url = $uploadedImage['url'];
+                
+                // 检查原始URL是否是协议相对URL（以//开头）
+                if (substr($image['url'], 0, 2) === '//') {
+                    // 如果原始URL是协议相对URL，则将上传后的URL也转换为协议相对URL
+                    $image_url = preg_replace('/^https?:\/\//', '//', $image_url);
+                }
+                
+                // 使用简单的字符串替换，这是原始代码的方式
                 $content = preg_replace('/'. preg_quote($image['url'], '/') .'/', $image_url, $content);
                 $content = preg_replace('/alt=["\']'. preg_quote($image['alt'], '/') .'["\']/', "alt='{$uploader->getAlt()}'", $content);
             }
@@ -100,7 +107,7 @@ class WpAutoUpload
         if (count($srcsets) > 0) {
             $count = 0;
             foreach ($srcsets as $key => $srcset) {
-                preg_match_all('/(https?:)?\/\/[^\s,]+/i', $srcset[1], $srcsetUrls, PREG_SET_ORDER);
+                preg_match_all('/(https?:\/\/|\/\/)[^\s,]+/i', $srcset[1], $srcsetUrls, PREG_SET_ORDER);
                 if (count($srcsetUrls) == 0) {
                     continue;
                 }
