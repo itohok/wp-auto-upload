@@ -144,6 +144,8 @@ class ImageUploader
             '%timestamp%' => time(),
             '%post_id%' => $this->post['ID'],
             '%postname%' => $this->post['post_name'],
+            '%product_tag%' => $this->getWooCommerceProductTag(),
+            '%product_title%' => $this->getWooCommerceProductTitle(),
         );
 
         if ($rules[0]) {
@@ -215,7 +217,7 @@ class ImageUploader
         $image['base_path'] = rtrim($this->getUploadDir('path'), DIRECTORY_SEPARATOR);
         $image['base_url'] = rtrim($this->getUploadDir('url'), '/');
         $image['path'] = $image['base_path'] . DIRECTORY_SEPARATOR . $image['filename'];
-        $image['url'] = $image['base_url'] . '/' . $image['filename'];
+        $image['url'] = self::normalizeUrl($image['base_url'] . '/' . $image['filename']);
         $c = 1;
 
         $sameFileExists = false;
@@ -226,7 +228,7 @@ class ImageUploader
             }
 
             $image['path'] = $image['base_path'] . DIRECTORY_SEPARATOR . $c . '_' . $image['filename'];
-            $image['url'] = $image['base_url'] . '/' . $c . '_' . $image['filename'];
+            $image['url'] = self::normalizeUrl($image['base_url'] . '/' . $c . '_' . $image['filename']);
             $c++;
         }
 
@@ -329,9 +331,76 @@ class ImageUploader
      */
     public static function normalizeUrl($url)
     {
-        if (preg_match('/^\/\/.*$/', $url)) {
-            return 'https:' . $url;
+        // 1. 清理 URL 前后的空白
+        $url = trim($url);
+
+        // 2. 处理以 // 开头的协议相对 URL（如 //example.com/image.jpg）
+        if (substr($url, 0, 2) === '//') {
+            // 不添加 https: 前缀，保持原样返回
+            return $url;
         }
+
+        // 3. 处理多重协议问题 (例如 https://https://example.com 或 https:https://example.com)
+        if (preg_match('/(https?:\/\/|https?:)+/i', $url)) {
+            // 提取域名和路径部分（去除所有协议前缀）
+            $parts = preg_split('/(https?:\/\/|https?:)+/i', $url, -1, PREG_SPLIT_NO_EMPTY);
+            if (!empty($parts)) {
+                // 使用 https:// 作为默认协议
+                $url = 'https://' . end($parts);
+            }
+        }
+
+        // 4. 修复缺少斜杠的情况，如 https:example.com
+        if (preg_match('/^https?:[^\/]/i', $url) && !preg_match('/^https?:\/\//', $url)) {
+            $url = preg_replace('/^(https?:)/i', '$1//', $url);
+        }
+
         return $url;
+    }
+    
+    /**
+     * 获取WooCommerce产品标签
+     * @return string 产品标签，如果没有则返回空字符串
+     */
+    protected function getWooCommerceProductTag()
+    {
+        // 检查是否是WooCommerce产品
+        if (!function_exists('wc_get_product') || $this->post['post_type'] !== 'product') {
+            return '';
+        }
+        
+        $product = wc_get_product($this->post['ID']);
+        if (!$product) {
+            return '';
+        }
+        
+        // 获取产品标签
+        $tags = wp_get_post_terms($this->post['ID'], 'product_tag');
+        if (empty($tags) || is_wp_error($tags)) {
+            return '';
+        }
+        
+        // 返回第一个标签名称
+        return sanitize_file_name($tags[0]->name);
+    }
+    
+    /**
+     * 获取WooCommerce产品标题
+     * @return string 产品标题，如果没有则返回空字符串
+     */
+    protected function getWooCommerceProductTitle()
+    {
+        // 检查是否是WooCommerce产品
+        if (!function_exists('wc_get_product') || $this->post['post_type'] !== 'product') {
+            return '';
+        }
+        
+        $product = wc_get_product($this->post['ID']);
+        if (!$product) {
+            return '';
+        }
+        
+        // 返回产品标题
+        return $product->get_title();
     }
 }
